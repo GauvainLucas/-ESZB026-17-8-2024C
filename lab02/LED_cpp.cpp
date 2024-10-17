@@ -3,6 +3,81 @@
 * Wiley 2016, ISBN 978-1-119-1868-1, http://www.exploringrpi.com/
 */
 
+/*
+To execute :
+   g++ -o LED_cpp LED_cpp.cpp
+   ./LED_cpp
+*/
+
+#include<iostream>
+#include<fstream>
+#include<string>
+#include<unistd.h> 
+using namespace std;
+
+#define GPIO_SYSFS "/sys/class/gpio/"
+#define GPIO_AMARELO "16"
+#define GPIO_RED "20"
+#define GPIO_VERDE "21"
+#define GPIO_PATH_AMARELO "/sys/class/gpio/gpio16/"
+#define GPIO_PATH_RED "/sys/class/gpio/gpio20/"
+#define GPIO_PATH_VERDE "/sys/class/gpio/gpio21/"
+
+
+void writeGPIO(string path, string filename, string value){
+   fstream fs;
+   fs.open((path + filename).c_str(), fstream::out);
+   fs << value;
+   fs.close();
+}
+
+// Setup GPIO pins
+void setup() {
+    cout << "Habilitando os GPIOs" << endl;
+    writeGPIO(GPIO_SYSFS, "export", GPIO_AMARELO);
+    writeGPIO(GPIO_SYSFS, "export", GPIO_RED);
+    writeGPIO(GPIO_SYSFS, "export", GPIO_VERDE);
+    usleep(100000); // 100 ms 
+    writeGPIO(GPIO_PATH_AMARELO, "direction", "out");
+    writeGPIO(GPIO_PATH_RED, "direction", "out");
+    writeGPIO(GPIO_PATH_VERDE, "direction", "out");
+    cout << "Setup ok" << endl;
+}
+
+// Close GPIO pins
+void closeGPIO() {
+    cout << "Desabilitando os GPIOs" << endl;
+    writeGPIO(GPIO_SYSFS, "unexport", GPIO_AMARELO);
+    writeGPIO(GPIO_SYSFS, "unexport", GPIO_RED);
+    writeGPIO(GPIO_SYSFS, "unexport", GPIO_VERDE);
+}
+
+// Main program
+int main() {
+    setup(); 
+    
+    for (int i = 0; i < 5; i++) {
+        // Red LED 
+        writeGPIO(GPIO_PATH_RED, "value", "1");
+        usleep(2000000); // 2000 ms = 2s
+        writeGPIO(GPIO_PATH_RED, "value", "0");
+        // Green 
+        writeGPIO(GPIO_PATH_VERDE, "value", "1");
+        usleep(1000000); // 1000 ms = 1s
+        writeGPIO(GPIO_PATH_VERDE, "value", "0");
+        // Yellow
+        writeGPIO(GPIO_PATH_AMARELO, "value", "1");
+        usleep(1000000); // 1000 ms = 1s
+        writeGPIO(GPIO_PATH_AMARELO, "value", "0");
+    }
+
+    closeGPIO();
+    return 0;
+}
+
+
+
+/********************* 
 #include<iostream>
 #include<fstream>
 #include<string>
@@ -61,3 +136,4 @@ int main(int argc, char* argv[]){
    cout << "Fim do programa em C++." << endl;
    return 0;
 }
+******************************************/
