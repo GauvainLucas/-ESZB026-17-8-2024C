@@ -16,18 +16,9 @@ def para_coleta():
     conexaoSerial.write(b'p')
 
 def intervalo_coleta():
-    conexaoSerial.write(b'p')
-    conexaoSerial.flush()
-    conexaoSerial.flush()
-    conexaoSerial.flush()
-    conexaoSerial.flush()
-    conexaoSerial.flush()
-    conexaoSerial.write(b'c')
-    dado1 = conexaoSerial.read()
-    dado2 = conexaoSerial.read()
-    intervalo = float( (ord(dado1) + ord(dado2)*256.0) )
-    texto1.setText("intervalo: "+str(intervalo).zfill(3)+"ms")
-    conexaoSerial.write(b'i')
+    conexaoSerial.write(b'c'
+)
+    text.setText(
 
 def ajusta_intervalo_mais():
     conexaoSerial.write(b'd')
@@ -44,7 +35,6 @@ def update():
     if conexaoSerial.inWaiting() > 1:
         dado1 = conexaoSerial.read()
         dado2 = conexaoSerial.read()
-        
         novodado = float( (ord(dado1) + ord(dado2)*256.0)*5.0/1023.0 )
         
         data1[x_atual] = novodado
@@ -58,7 +48,6 @@ def update():
         taxa = str(round(actualTime-previousTime))
         previousTime = actualTime
         texto.setText("taxa: "+taxa.zfill(3)+"ms" )
-        
 
 win = pg.GraphicsWindow()
 win.setWindowTitle('Coletando dados do Arduino via Porta Serial')
@@ -73,10 +62,7 @@ ptr1 = 0
 
 previousTime = time.time()*1000 # pega a hora atual, em milissegundos
 texto = pg.TextItem(text="", color=(255,255,0), anchor=(0,1))
-texto1 = pg.TextItem(text="", color=(255,255,0), anchor=(0,1))
 p1.addItem(texto)
-p1.addItem(texto1)
-texto1.setPos(750,4)
 texto.setPos(0,0) # adiciona o texto na posicao (0,0) do grafico
 
 proxy1 = QtGui.QGraphicsProxyWidget()
@@ -113,7 +99,7 @@ p2.addItem(proxy4,row=3,col=0)
 p2.addItem(proxy5,row=3,col=1)
 
 conexaoSerial = serial.Serial('/dev/ttyACM0',115200)
-#conexaoSerial.write(b'i')
+conexaoSerial.write(b'i')
         
 # inicia timer rodando o mais rápido possível
 timer = QtCore.QTimer()
