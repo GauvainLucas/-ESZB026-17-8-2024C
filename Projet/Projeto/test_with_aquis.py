@@ -5,18 +5,13 @@ import time
 import subprocess
 from PIL import ImageGrab
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem,
+    QApplication, QMainWindow, QGraphicsView, QGraphicsScene,
     QPushButton, QFileDialog, QDockWidget, QVBoxLayout, QWidget, QMessageBox, QGraphicsTextItem,
     QGraphicsLineItem, QColorDialog, QFontDialog, QMessageBox, QShortcut, QLineEdit, QInputDialog
 )
 from PyQt5.QtGui import QPixmap, QPen, QColor, QFont, QImage, QPainter
-from PyQt5.QtCore import Qt, QPointF, QRectF, QBuffer, QByteArray
+from PyQt5.QtCore import Qt, QPointF, QRectF
 from PyQt5.QtGui import QKeySequence
-
-from dominate import document
-from dominate.tags import *
-from screeninfo import get_monitors
-import base64
 
 class Data:
     def __init__(self, name, value):
