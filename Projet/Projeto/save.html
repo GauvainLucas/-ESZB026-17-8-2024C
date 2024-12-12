@@ -29,6 +29,25 @@
                         margin-left: auto;
                         margin-right: auto;
                     }
+
+                    table {
+                    border-collapse: collapse;
+                    width: 80%;
+                    margin-right: auto;
+                    margin-left: auto;
+                    }
+
+                    th, td {
+                    border: 1px solid #ddd;
+                    padding: 8px;
+                    text-align: left;
+                    }
+
+                    th {
+                    background-color: #f2f2f2;
+                    text-align: center; /* Centre le texte horizontalement */
+                    font-weight: bold; /* Met le texte en gras */
+                    }
                 </style>
             </head>
             <body>
@@ -36,7 +55,7 @@
                 <img src="temp/before.png" alt="Image Load">
                 <hr width="100%" size="2">
                 <h2>Measurement Report</h2>
-                <ul><li><strong>Measurement:</strong> c <strong>Distance:</strong> 165.22 px</li></ul>
+                <table><tr><th>Measurement</th><th>Size</th></tr><tr><td>measure1</td><td>31.44 mm</td></tr><tr><td>measure2</td><td>50.39 mm</td></tr><tr><td>measure3</td><td>23.51 mm</td></tr></table>
                 <hr width="100%" size="2">
                 <h2>Rendered Scene</h2>
                 <img src="temp/after.png" alt="Image after analyse">

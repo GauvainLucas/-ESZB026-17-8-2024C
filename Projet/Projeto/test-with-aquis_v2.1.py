@@ -15,7 +15,7 @@ from PyQt5.QtGui import QKeySequence
 
 from dominate import document
 from dominate.tags import *
-
+from screeninfo import get_monitors
 import base64
 
 class Data:
@@ -290,7 +290,18 @@ class ImageAnalyzer(QMainWindow):
 
             # Calcula a distância
             distance = ((position.x() - self.first_point.x())**2 + (position.y() - self.first_point.y())**2)**0.5
-            distance_text = QGraphicsTextItem(f"{distance:.2f} px")
+
+            # convert in mm regarding the screen
+
+            # Récupération de la résolution de l'écran en DPI
+            screen = QApplication.primaryScreen()
+            dpi = screen.physicalDotsPerInch()
+
+            # Conversion de pixels en millimètres
+            distance = distance / dpi * 25.4
+            # convert in mm regarding the screen
+
+            distance_text = QGraphicsTextItem(f"{distance:.2f} mm")
             midpoint = QPointF((self.first_point.x() + position.x()) / 2, (self.first_point.y() + position.y()) / 2)
             distance_text.setPos(midpoint)
             distance_text.setFont(self.current_text_font)
@@ -300,7 +311,7 @@ class ImageAnalyzer(QMainWindow):
             self.scene.addItem(distance_text)
             # save the distance
             # name it
-            text, pressed = QInputDialog.getText(window, "Input Text", "Measurement value", QLineEdit.Normal, "")
+            text, pressed = QInputDialog.getText(window, "Input Text", "Enter the easurement name:", QLineEdit.Normal, "")
             print(text)
             new_data = Data(text, distance_text.toPlainText())
              # Ajout au dictionnaire avec une clé unique
@@ -470,6 +481,25 @@ class ImageAnalyzer(QMainWindow):
                         margin-left: auto;
                         margin-right: auto;
                     }
+
+                    table {
+                    border-collapse: collapse;
+                    width: 80%;
+                    margin-right: auto;
+                    margin-left: auto;
+                    }
+
+                    th, td {
+                    border: 1px solid #ddd;
+                    padding: 8px;
+                    text-align: left;
+                    }
+
+                    th {
+                    background-color: #f2f2f2;
+                    text-align: center; /* Centre le texte horizontalement */
+                    font-weight: bold; /* Met le texte en gras */
+                    }
                 </style>
             </head>
             <body>
@@ -477,12 +507,12 @@ class ImageAnalyzer(QMainWindow):
                 <img src="temp/before.png" alt="Image Load">
                 <hr width="100%" size="2">
                 <h2>Measurement Report</h2>
-                <ul>"""
+                <table>"""
             # Add data from self.dict (assuming the structure is as described)
+            html_content += f"<tr><th>Measurement</th><th>Size</th></tr>"
             for a, distance in self.dict.items():
-                html_content += f"<li><strong>Measurement:</strong> {distance['name']} <strong>Distance:</strong> {distance['value']}</li>"
-
-            html_content += """</ul>
+                html_content += f"<tr><td>{distance['name']}</td><td>{distance['value']}</td></tr>"
+            html_content += """</table>
                 <hr width="100%" size="2">
                 <h2>Rendered Scene</h2>
                 <img src="temp/after.png" alt="Image after analyse">
