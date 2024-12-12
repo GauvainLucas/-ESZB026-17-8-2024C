@@ -1,5 +1,5 @@
 import os
-#import pygetwindow as gw #for windows
+# import pygetwindow as gw #for windows
 import pyautogui as gui #for linux
 import time
 import subprocess
