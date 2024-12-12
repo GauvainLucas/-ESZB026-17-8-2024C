@@ -1,5 +1,6 @@
 import os
-import pygetwindow as gw
+#import pygetwindow as gw #for windows
+import pyautogui as gui #for linux
 import time
 import subprocess
 from PIL import ImageGrab
@@ -24,7 +25,18 @@ class Data:
     
     def to_dict(self):
         return {"name": self.name, "value": self.value}
-
+    
+def get_windows_with_title(title):
+        # Exécuter wmctrl pour lister toutes les fenêtres
+        result = subprocess.run(['wmctrl', '-l'], capture_output=True, text=True)
+        
+        # Filtrer les fenêtres qui correspondent au titre (insensible à la casse)
+        windows = []
+        for line in result.stdout.splitlines():
+            if title.lower() in line.lower():
+                windows.append(line)
+        
+        return windows
 
 class ImageAnalyzer(QMainWindow):
     def __init__(self):
@@ -59,7 +71,6 @@ class ImageAnalyzer(QMainWindow):
         # Atalhos de Teclado
         self.init_shortcuts()
 
-  
 
     def init_toolbar(self):
         # Button to load images from file
@@ -157,7 +168,8 @@ class ImageAnalyzer(QMainWindow):
         Captures a screenshot of the specified window by title.
         """
         # Locate the window by title
-        windows = gw.getWindowsWithTitle(window_title)
+        # windows = gw.getWindowsWithTitle(window_title)
+        windows = get_windows_with_title(window_title)
         if not windows:
             print(f"No window with title '{window_title}' found.")
             return False
@@ -199,7 +211,8 @@ class ImageAnalyzer(QMainWindow):
 
 
             for _ in range(max_retries):
-                windows = gw.getWindowsWithTitle(window_title)
+                # windows = gw.getWindowsWithTitle(window_title)
+                windows = get_windows_with_title(window_title)
                 if windows:
                     print("Processing window found.")
                     break
@@ -451,7 +464,7 @@ class ImageAnalyzer(QMainWindow):
 
                     img {
                         display: block;
-                        max-width: 65%;
+                        max-width: 65é%;
                         height: auto; 
                         margin-bottom: 10px;
                         margin-left: auto;
