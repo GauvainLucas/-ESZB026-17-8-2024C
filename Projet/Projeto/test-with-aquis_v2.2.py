@@ -36,7 +36,7 @@ class ImageAnalyzer(QMainWindow):
         self.addToolBar("Main").addWidget(acquire_image_btn)
 
     def acquire_image_from_processing(self):
-        processing_sketch_path = r"C:\Users\jjvin\Desktop\Projeto\ultrasonogram_viewer"
+        processing_sketch_path = "ultrasonogram_viewer"
         if not os.path.exists(processing_sketch_path):
             QMessageBox.critical(self, "Error", f"Sketch not found: {processing_sketch_path}")
             return
@@ -44,7 +44,7 @@ class ImageAnalyzer(QMainWindow):
         try:
             print("Running Processing sketch...")
             process = subprocess.Popen(
-                [r"C:\Processing\processing-java", "--sketch=" + processing_sketch_path, "--run"],
+                [r"C:\Users\Lucas\Downloads\processing-4.3-20241114T003936Z-001\processing-4.3\processing-java", "--sketch=" + processing_sketch_path, "--run"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True

@@ -6,15 +6,25 @@ from PIL import ImageGrab
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem,
     QPushButton, QFileDialog, QDockWidget, QVBoxLayout, QWidget, QMessageBox, QGraphicsTextItem,
-    QGraphicsLineItem, QColorDialog, QFontDialog
+    QGraphicsLineItem, QColorDialog, QFontDialog, QMessageBox, QShortcut, QLineEdit, QInputDialog
 )
-from PyQt5.QtGui import QPixmap, QPen, QColor, QFont
-from PyQt5.QtCore import Qt, QPointF, QRectF
+from PyQt5.QtGui import QPixmap, QPen, QColor, QFont, QImage, QPainter
+from PyQt5.QtCore import Qt, QPointF, QRectF, QBuffer, QByteArray
 from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QShortcut
 
+from dominate import document
+from dominate.tags import *
 
-void QGraphicsTextItem::setDefaultTextColor ( const QColor & col ) 
+import base64
+
+class Data:
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+    
+    def to_dict(self):
+        return {"name": self.name, "value": self.value}
+
 
 class ImageAnalyzer(QMainWindow):
     def __init__(self):
@@ -28,6 +38,14 @@ class ImageAnalyzer(QMainWindow):
         self.view.setScene(self.scene)
         self.setCentralWidget(self.view)
         self.image_item = None
+
+         # Undo/Redo Stacks
+        self.undo_stack = []
+        self.redo_stack = []
+
+        # data dict
+        self.dict = {}
+        self.dict_index = 0
         
         # Current Styles
         self.current_line_color = QColor(Qt.white)
@@ -40,6 +58,8 @@ class ImageAnalyzer(QMainWindow):
 
         # Atalhos de Teclado
         self.init_shortcuts()
+
+  
 
     def init_toolbar(self):
         # Button to load images from file
@@ -64,6 +84,11 @@ class ImageAnalyzer(QMainWindow):
         add_text_btn.clicked.connect(self.activate_add_text)
         sidebar_layout.addWidget(add_text_btn)
 
+        # Add change text color
+        change_text_color_btn = QPushButton("Change Text Color")
+        change_text_color_btn.clicked.connect(self.change_text_color)
+        sidebar_layout.addWidget(change_text_color_btn)
+
         # Measure Distance Button
         measure_distance_btn = QPushButton("Measure Distance")
         measure_distance_btn.clicked.connect(self.activate_measure_distance)
@@ -79,9 +104,20 @@ class ImageAnalyzer(QMainWindow):
         change_color_btn.clicked.connect(self.change_line_color)
         sidebar_layout.addWidget(change_color_btn)
 
+        # change text button
         change_font_btn = QPushButton("Change Text Font")
         change_font_btn.clicked.connect(self.change_text_font)
         sidebar_layout.addWidget(change_font_btn)
+
+        # Save image button
+        save_image_btn = QPushButton("Save image")
+        save_image_btn.clicked.connect(self.save_image)
+        sidebar_layout.addWidget(save_image_btn)
+
+        # Generate HTML report button
+        generate_html = QPushButton("Generate report")
+        generate_html.clicked.connect(self.generate_report)
+        sidebar_layout.addWidget(generate_html)
 
         sidebar_widget.setLayout(sidebar_layout)
         self.sidebar.setWidget(sidebar_widget)
@@ -140,7 +176,7 @@ class ImageAnalyzer(QMainWindow):
     
     def acquire_image_from_processing(self):
         # Path to the Processing sketch
-        processing_sketch_path = r"C:\Users\jjvin\Desktop\Projeto\ultrasonogram_viewer\ultrasonogram_viewer.pde"
+        processing_sketch_path = r"ultrasonogram_viewer\ultrasonogram_viewer.pde"
 
         # Check if the sketch exists
         if not os.path.exists(processing_sketch_path):
@@ -150,7 +186,7 @@ class ImageAnalyzer(QMainWindow):
         # Run the Processing sketch
         try:
             print("Running Processing sketch...")
-            subprocess.Popen([r"C:\Processing\processing-java", "--sketch=" + os.path.dirname(processing_sketch_path), "--run"])
+            subprocess.Popen([r"processing-4.3\processing-java", "--sketch=" + os.path.dirname(processing_sketch_path), "--run"])
 
             QMessageBox.information(self, "Acquisition Started", "Processing sketch is running. Please wait.")
 
@@ -170,9 +206,9 @@ class ImageAnalyzer(QMainWindow):
                 QMessageBox.warning(self, "Error", f"Window with title '{window_title}' not found.")
                 return
             # Delay to ensure the window is fully loaded
-            time.sleep(15)  # Wait 2 seconds after detecting the window
+            time.sleep(10)  # Wait 2 seconds after detecting the window
             # Capture screenshot of the Processing window
-            output_file = r"C:\Users\jjvin\Desktop\Projeto\processing_screenshot.png"
+            output_file = r"processing_screenshot.png"
             if self.capture_processing_window(window_title, output_file):
                 self.load_image(output_file)
             else:
@@ -200,41 +236,68 @@ class ImageAnalyzer(QMainWindow):
             elif self.measuring_distance:
                 self.add_distance_point(scene_pos)
 
+    def change_text_color(self):
+        color = QColorDialog.getColor(self.current_text_color, self, "Select Text Color")
+        if color.isValid():
+            self.current_text_color = color
+            print(f"Text color changed to: {color.name()}")
+
+            # Aplicar a nova cor a todas as caixas de texto existentes
+            for item in self.scene.items():
+                if isinstance(item, QGraphicsTextItem):
+                    item.setDefaultTextColor(self.current_text_color)
+
+
     def add_text_item(self, position):
-    
         text_item = QGraphicsTextItem("New Text")
         text_item.setPos(position)
+        text_item.setFont(self.current_text_font)
+        text_item.setDefaultTextColor(self.current_text_color)
         text_item.setFlag(QGraphicsTextItem.ItemIsMovable)
         text_item.setFlag(QGraphicsTextItem.ItemIsSelectable)
         text_item.setTextInteractionFlags(Qt.TextEditorInteraction)
         self.scene.addItem(text_item)
 
+        # Adiciona ação no undo_stack
+        self.undo_stack.append(("add_text", text_item))
+        self.redo_stack.clear()  # Limpa o redo_stack ao fazer uma nova ação
+
     def add_distance_point(self, position):
         if self.first_point is None:
-            # Set the first point for distance measurement
             self.first_point = position
             print(f"First point set at: {position}")
         else:
-            # Draw a line between first_point and position
             line = QGraphicsLineItem(self.first_point.x(), self.first_point.y(), position.x(), position.y())
-            line.setPen(QPen(Qt.white, 2))
+            pen = QPen(self.current_line_color, 2)
+            line.setPen(pen)
             line.setFlag(QGraphicsLineItem.ItemIsSelectable)
             self.scene.addItem(line)
 
-            # Calculate the distance
+            # Calcula a distância
             distance = ((position.x() - self.first_point.x())**2 + (position.y() - self.first_point.y())**2)**0.5
-            print(f"Distance measured: {distance:.2f} px")
-
-            # Add text to show the distance
             distance_text = QGraphicsTextItem(f"{distance:.2f} px")
             midpoint = QPointF((self.first_point.x() + position.x()) / 2, (self.first_point.y() + position.y()) / 2)
             distance_text.setPos(midpoint)
+            distance_text.setFont(self.current_text_font)
+            distance_text.setDefaultTextColor(self.current_line_color)
             distance_text.setFlag(QGraphicsTextItem.ItemIsMovable)
             distance_text.setFlag(QGraphicsTextItem.ItemIsSelectable)
             self.scene.addItem(distance_text)
+            # save the distance
+            # name it
+            text, pressed = QInputDialog.getText(window, "Input Text", "Measurement value", QLineEdit.Normal, "")
+            print(text)
+            new_data = Data(text, distance_text.toPlainText())
+             # Ajout au dictionnaire avec une clé unique
+            self.dict[self.dict_index] = new_data.to_dict()
+            self.dict_index += 1
 
-            # Reset first_point for the next measurement
+            # Adiciona ações no undo_stack
+            self.undo_stack.append(("add_line", line, distance_text))
+            self.redo_stack.clear()  # Limpa o redo_stack ao fazer uma nova ação
+
             self.first_point = None
+
 
     def change_line_color(self):
         color = QColorDialog.getColor()
@@ -248,23 +311,164 @@ class ImageAnalyzer(QMainWindow):
             self.current_text_font = font
             print(f"Text font changed to: {font.family()}")
 
-    def undo(self):
-        print("Undo not implemented yet.")
-
-    def redo(self):
-        print("Redo not implemented yet.")
-
     def delete_selected_items(self):
         selected_items = self.scene.selectedItems()
         if not selected_items:
-            QMessageBox.information(self, "No Selection", "No items selected.")
+            QMessageBox.warning(self, "Delete", "No items selected to delete.")
             return
 
-        confirmation = QMessageBox.question(self, "Confirm Deletion", "Are you sure you want to delete the selected items?",
-                                            QMessageBox.Yes | QMessageBox.No)
+        confirmation = QMessageBox.question(
+            self, "Confirm Deletion", f"Are you sure you want to delete {len(selected_items)} selected item(s)?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+
         if confirmation == QMessageBox.Yes:
+            actions = []
+
             for item in selected_items:
                 self.scene.removeItem(item)
+                if isinstance(item, QGraphicsTextItem):
+                    actions.append(("add_text", item))
+                elif isinstance(item, QGraphicsLineItem):
+                    distance_text = next(
+                        (i for i in self.scene.items() if isinstance(i, QGraphicsTextItem) and i.pos() == item.boundingRect().center()),
+                        None
+                    )
+                    actions.append(("add_line", item, distance_text))
+                    if distance_text:
+                        self.scene.removeItem(distance_text)
+
+            self.undo_stack.append(("delete", actions))
+            self.redo_stack.clear()
+            print(f"Deleted {len(selected_items)} item(s).")
+
+    def undo(self):
+        if not self.undo_stack:
+            QMessageBox.information(self, "Undo", "Nothing to undo.")
+            return
+
+        action = self.undo_stack.pop()
+
+        if action[0] == "add_text":
+            self.scene.removeItem(action[1])
+            self.redo_stack.append(action)
+
+        elif action[0] == "add_line":
+            self.scene.removeItem(action[1])
+            self.scene.removeItem(action[2])
+            self.redo_stack.append(action)
+
+        elif action[0] == "delete":
+            for sub_action in action[1]:
+                if sub_action[0] == "add_text":
+                    self.scene.addItem(sub_action[1])
+                elif sub_action[0] == "add_line":
+                    self.scene.addItem(sub_action[1])
+                    if sub_action[2]:
+                        self.scene.addItem(sub_action[2])
+            self.redo_stack.append(action)
+
+        print("Undo performed.")
+
+    def redo(self):
+        if not self.redo_stack:
+            QMessageBox.information(self, "Redo", "Nothing to redo.")
+            return
+
+        action = self.redo_stack.pop()
+
+        if action[0] == "add_text":
+            self.scene.addItem(action[1])
+            self.undo_stack.append(action)
+
+        elif action[0] == "add_line":
+            self.scene.addItem(action[1])
+            self.scene.addItem(action[2])
+            self.undo_stack.append(action)
+
+        elif action[0] == "delete":
+            for sub_action in action[1]:
+                if sub_action[0] == "add_text":
+                    self.scene.removeItem(sub_action[1])
+                elif sub_action[0] == "add_line":
+                    self.scene.removeItem(sub_action[1])
+                    if sub_action[2]:
+                        self.scene.removeItem(sub_action[2])
+            self.undo_stack.append(action)
+
+        print("Redo performed.")
+    
+    # Método para salvar a cena como imagem
+    def save_scene_as_image(self, file_path):
+        rect = self.scene.sceneRect()
+        image = QImage(int(rect.width()), int(rect.height()), QImage.Format_ARGB32)
+        image.fill(Qt.white)  # Fundo branco
+
+        painter = QPainter(image)
+        self.scene.render(painter)
+        painter.end()
+        image.save(file_path)
+        
+        print(f"Scene saved as image: {file_path}")
+
+    # Método para salvar a imagem quando o botão é clicado
+    def save_image(self):
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save Image", "", "Image Files (*.png *.jpg)")
+        if file_path:
+            self.save_scene_as_image(file_path)
+
+    def generate_html_report(self, file_path):
+        
+        if not file_path:  # Verify that the file path is valid
+            QMessageBox.warning(self, "Error", "No file selected for saving the report.")
+            return
+
+        try:
+            html_content = "<html><body><h1>Scene Report</h1><ul>"
+            '''
+            # Ajouter les données du dictionnaire
+            for a, distance in self.dict.items():  # .items() pour parcourir les clés et les valeurs
+                html_content += f"<li><strong>Measurement:</strong> {distance['name']} <strong>Distance:</strong> {distance['value']}</li>"
+            '''
+            # Ajouter la section <h2> avec le rapport des mesures
+            html_content += "</ul>"  # Fin de la première liste
+            html_content += "<h2>Measurement Report</h2><ul>"
+  
+            # Ajouter les données du dictionnaire
+            for a, distance in self.dict.items():
+                html_content += f"<li><strong>Name:</strong> {distance['name']} <strong>Value:</strong> {distance['value']}</li>"
+            html_content += "</ul>"
+
+            html_content += "<h2>Rendered Scene</h2>"
+            html_content += f'<img src="processing_screenshot.png" alt="Image Load" width="80%"><br>'
+            html_content += f'<img src="{self.image_item}" alt="Image after analyse" width="80%"><br>'
+
+            # Finir le contenu HTML
+            html_content += "</ul></body></html>"
+
+            # Ouvrir le fichier et écrire le contenu
+            with open(file_path, "w", encoding="utf-8") as file:
+                file.write(html_content)
+
+            # Afficher un message de succès
+            QMessageBox.information(self, "Success", f"HTML report saved successfully: {file_path}")
+            print(f"HTML report saved as: {file_path}")
+
+        except Exception as e:
+            # Afficher un message d'erreur
+            QMessageBox.critical(self, "Error", f"Failed to save the report: {str(e)}")
+            print(f"Error savng report: {str(e)}")
+
+
+    # Método para gerar o relatório HTML quando o botão é clicado
+    def generate_report(self):
+        # just to test
+        print(self.dict)
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save Report", "", "HTML Files (*.html)")
+        if file_path:  # Proceed only if the user selects a valid path
+            self.generate_html_report(file_path)
+        else:
+            QMessageBox.information(self, "Canceled", "Report generation canceled.")
 
 
 
