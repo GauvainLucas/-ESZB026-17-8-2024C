@@ -464,7 +464,7 @@ class ImageAnalyzer(QMainWindow):
 
                     img {
                         display: block;
-                        max-width: 65é%;
+                        max-width: 65%;
                         height: auto; 
                         margin-bottom: 10px;
                         margin-left: auto;
