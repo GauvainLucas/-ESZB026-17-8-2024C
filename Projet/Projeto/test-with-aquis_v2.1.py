@@ -135,6 +135,7 @@ class ImageAnalyzer(QMainWindow):
         if file_name:
             self.load_image(file_name)
 
+
     def load_image(self, file_path):
         """
         Loads an image file into the QGraphicsScene.
@@ -146,6 +147,7 @@ class ImageAnalyzer(QMainWindow):
             self.image_item = self.scene.addPixmap(pixmap)
             self.image_item.setZValue(-1)  # Ensure image is behind all other items
             self.scene.setSceneRect(QRectF(pixmap.rect()))  # Convert QRect to QRectF
+            self.save_scene_as_image("temp/before.png")
             print("Image successfully added to the scene.")
         else:
             print("Failed to load image.")
@@ -418,47 +420,72 @@ class ImageAnalyzer(QMainWindow):
             self.save_scene_as_image(file_path)
 
     def generate_html_report(self, file_path):
-        
-        if not file_path:  # Verify that the file path is valid
+        self.save_scene_as_image("temp/after.png") 
+        if not file_path: 
             QMessageBox.warning(self, "Error", "No file selected for saving the report.")
             return
 
         try:
-            html_content = "<html><body><h1>Scene Report</h1><ul>"
-            '''
-            # Ajouter les données du dictionnaire
-            for a, distance in self.dict.items():  # .items() pour parcourir les clés et les valeurs
-                html_content += f"<li><strong>Measurement:</strong> {distance['name']} <strong>Distance:</strong> {distance['value']}</li>"
-            '''
-            # Ajouter la section <h2> avec le rapport des mesures
-            html_content += "</ul>"  # Fin de la première liste
-            html_content += "<h2>Measurement Report</h2><ul>"
-  
-            # Ajouter les données du dictionnaire
+            html_content = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {
+                        font-family: sans-serif;
+                        margin: 20px;
+                    }
+
+                    h1, h2 {
+                        text-align: center;
+                    }
+
+                    ul {
+                        list-style-type: none;
+                        padding: 0;
+                    }
+
+                    li {
+                        margin-bottom: 5px;
+                    }
+
+                    img {
+                        display: block;
+                        max-width: 65%;
+                        height: auto; 
+                        margin-bottom: 10px;
+                        margin-left: auto;
+                        margin-right: auto;
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>Scene Report</h1>
+                <img src="temp/before.png" alt="Image Load">
+                <hr width="100%" size="2">
+                <h2>Measurement Report</h2>
+                <ul>"""
+            # Add data from self.dict (assuming the structure is as described)
             for a, distance in self.dict.items():
-                html_content += f"<li><strong>Name:</strong> {distance['name']} <strong>Value:</strong> {distance['value']}</li>"
-            html_content += "</ul>"
+                html_content += f"<li><strong>Measurement:</strong> {distance['name']} <strong>Distance:</strong> {distance['value']}</li>"
 
-            html_content += "<h2>Rendered Scene</h2>"
-            html_content += f'<img src="processing_screenshot.png" alt="Image Load" width="80%"><br>'
-            html_content += f'<img src="{self.image_item}" alt="Image after analyse" width="80%"><br>'
+            html_content += """</ul>
+                <hr width="100%" size="2">
+                <h2>Rendered Scene</h2>
+                <img src="temp/after.png" alt="Image after analyse">
+            </body>
+            </html>
+            """
 
-            # Finir le contenu HTML
-            html_content += "</ul></body></html>"
-
-            # Ouvrir le fichier et écrire le contenu
             with open(file_path, "w", encoding="utf-8") as file:
                 file.write(html_content)
 
-            # Afficher un message de succès
             QMessageBox.information(self, "Success", f"HTML report saved successfully: {file_path}")
             print(f"HTML report saved as: {file_path}")
 
         except Exception as e:
-            # Afficher un message d'erreur
             QMessageBox.critical(self, "Error", f"Failed to save the report: {str(e)}")
-            print(f"Error savng report: {str(e)}")
-
+            print(f"Error saving report: {str(e)}")
 
     # Método para gerar o relatório HTML quando o botão é clicado
     def generate_report(self):
