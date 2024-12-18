@@ -12,9 +12,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QPixmap, QPen, QColor, QFont, QImage, QPainter
 from PyQt5.QtCore import Qt, QPointF, QRectF
 from PyQt5.QtGui import QKeySequence
-
-from PyQt5.QtGui import QWindow
-from PyQt5.QtWidgets import QGraphicsProxyWidget, QWidget
+import pyscreenshot as ImageGrab
 
 class Data:
     def __init__(self, name, value):
@@ -24,18 +22,17 @@ class Data:
     def to_dict(self):
         return {"name": self.name, "value": self.value}
     
-
 def get_windows_with_title(title):
-    # Exécuter wmctrl pour lister toutes les fenêtres
-    result = subprocess.run(['wmctrl', '-l'], capture_output=True, text=True)
-    print(result)
-    # Filtrer les fenêtres qui correspondent au titre (insensible à la casse)
-    windows = []
-    for line in result.stdout.splitlines():
-        if title.lower() in line.lower():
-            windows.append(line)
-    
-    return windows
+        # Exécuter wmctrl pour lister toutes les fenêtres
+        result = subprocess.run(['wmctrl', '-l'], 
+        capture_output=True, text=True)
+        
+        # Filtrer les fenêtres qui correspondent au titre (insensible à la casse)
+        windows = []
+        for line in result.stdout.splitlines():
+            if title.lower() in line.lower():
+                windows.append(line)
+        return windows
 
 class ImageAnalyzer(QMainWindow):
     def __init__(self):
@@ -162,115 +159,89 @@ class ImageAnalyzer(QMainWindow):
         else:
             print("Failed to load image.")
 
-    def embed_radar_window(self, window_title):
-        """
-        Embeds an external window into the QGraphicsScene by its title.
-        """
-        # Trouver la fenêtre par son titre
-        windows = get_windows_with_title(window_title)
-        if not windows:
-            QMessageBox.critical(self, "Error", f"No window with title '{window_title}' found.")
-            return
-
-        # Obtenez l'ID de la fenêtre correspondante
-        window_id = int(windows[0].split()[0], 16)  # Extract window ID in hexadecimal
-
-        # Convertir la fenêtre en QWindow
-        external_window = QWindow.fromWinId(window_id)
-        container = QWidget.createWindowContainer(external_window, self)
-
-        # Ajouter à la scène via un QGraphicsProxyWidget
-        proxy_widget = QGraphicsProxyWidget()
-        proxy_widget.setWidget(container)
-        self.scene.addItem(proxy_widget)
-
-        # Ajuster la vue pour afficher la fenêtre
-        self.view.fitInView(self.scene.sceneRect(), Qt.KeepAspectRatio)
-    
-    
-    def embed_external_window(self, window_title):
-        """
-        Embeds an external window into the QGraphicsScene by its title.
-        """
-        # Rechercher la fenêtre par son titre
-        windows = get_windows_with_title(window_title)
-        if not windows:
-            QMessageBox.critical(self, "Error", f"No window with title '{window_title}' found.")
-            return
-
-        # Obtenez l'ID de la fenêtre (première occurrence trouvée)
-        window_id = int(windows[0].split()[0], 16)  # Convertir l'ID hexadécimal en entier
-
-        # Créer un QWindow lié à l'ID
-        external_window = QWindow.fromWinId(window_id)
-        external_window.setFlags(Qt.FramelessWindowHint)  # Supprimer le cadre de la fenêtre externe
-
-        # Créer un conteneur QWidget pour encapsuler le QWindow
-        container = QWidget.createWindowContainer(external_window, self)
-        container.setMinimumSize(self.view.width(), self.view.height())  # Ajuster à la taille de la vue principale
-
-        # Ajouter le conteneur à la scène via QGraphicsProxyWidget
-        proxy_widget = QGraphicsProxyWidget()
-        proxy_widget.setWidget(container)
-        self.scene.clear()  # Effacer tout autre élément dans la scène
-        self.scene.addItem(proxy_widget)
-
-        # Ajuster la vue pour afficher correctement la fenêtre
-        self.view.setSceneRect(0, 0, container.width(), container.height())
-        self.view.fitInView(self.scene.sceneRect(), Qt.KeepAspectRatio)
-
     def capture_processing_window(self, window_title, output_file):
         """
         Captures a screenshot of the specified window by title.
         """
         # Locate the window by title
         # windows = gw.getWindowsWithTitle(window_title)
-        windows = get_windows_with_title(window_title)
-        if not windows:
+        window = get_windows_with_title(window_title)[0]
+        print("window title is:", window_title )
+        if not window:
             print(f"No window with title '{window_title}' found.")
             return False
 
         # Get the first matching window
-        window = windows[0]
-        print(f"Capturing window: {window.title}")
+        # window = windows[0]
+        print(f"Capturing window: {window_title}")
+        #sleep(5)
+        #imagem = ImageGrab.grab()
+        #imagem.save('processing_screenshot.png', 'png')
+        
+        import os
+        os.system('import -window $(xdotool getwindowfocus) -pause 5 processing_screenshot.png ; sleep 1;')
 
+        
+        # x1, y1, x2, y2 = window.left, window.top, window.left + window.width, window.top + window.height
+        # Capture the specified window
+        
+        # im = ImageGrab.grab(bbox=(x1, y1, x2, y2))
+        # im.show()
         # Get the bounding box of the window
-        bbox = (window.left, window.top, window.right, window.bottom)
+        # bbox = (window.left, window.top, window.right, window.bottom)
 
         # Capture the screen within the bounding box
-        screenshot = ImageGrab.grab(bbox)
-        screenshot.save(output_file)
-        print(f"Screenshot saved to {output_file}")
+        # screenshot = ImageGrab.grab()
+        # screenshot.save(output_file)
+        # print(f"Screenshot saved to {output_file}")
 
         return True
     
     def acquire_image_from_processing(self):
-        radar_script_path = "ultrasonogram_viewer/sonar.py"
+        # Path to the Processing sketch
+        processing_sketch_path = r"ultrasonogram_viewer/ultrasonogram_viewer.pde"
 
-        if not os.path.exists(radar_script_path):
-            QMessageBox.critical(self, "Error", f"Radar script not found: {radar_script_path}")
+        # Check if the sketch exists
+        if not os.path.exists(processing_sketch_path):
+            QMessageBox.critical(self, "Error", f"Sketch not found: {processing_sketch_path}")
             return
 
+        # Run the Processing sketch
         try:
-            print("Running radar simulator...")
-            subprocess.Popen(["python3", radar_script_path])
+            print("Running Processing sketch...")
+            subprocess.Popen([r"processing-4.3.1/processing-java", "--sketch=" + os.path.dirname(processing_sketch_path), "--run"])
 
-            QMessageBox.information(self, "Acquisition Started", "Radar simulator is running. Please wait.")
+            # QMessageBox.information(self, "Acquisition Started", "Processing sketch is running. Please wait.")
 
-            # Donner un délai pour que la fenêtre radar s'ouvre
-            time.sleep(2)
+            # Wait for the Processing window to appear
+            window_title = "ultrasonogram_viewer"  # Modify this to match the window title
+            max_retries = 20  # Retry up to 20 times (total ~10 seconds)
+            retry_interval = 3  # Time to wait between retries (0.5 seconds)
 
-            # Intégrer la fenêtre radar dans la scène principale
-            self.embed_external_window("Radar Simulation")  # Remplacez par le titre exact de votre fenêtre radar
 
+            for _ in range(max_retries):
+                # windows = gw.getWindowsWithTitle(window_title)
+                windows = get_windows_with_title(window_title)
+                if windows:
+                    print("Processing window found.")
+                    break
+                time.sleep(retry_interval)
+            else:
+                QMessageBox.warning(self, "Error", f"Window with title '{window_title}' not found.")
+                return
+            # Delay to ensure the window is fully loaded
+            time.sleep(10)  # Wait 2 seconds after detecting the window
+            # Capture screenshot of the Processing window
+            output_file = r"processing_screenshot.png"
+            if self.capture_processing_window(window_title, output_file):
+                self.load_image(output_file)
+            else:
+                QMessageBox.critical(self, "Error", f"Failed to capture the Processing window.")
+
+        except subprocess.CalledProcessError as e:
+            QMessageBox.critical(self, "Error", f"Failed to run Processing sketch.\n\n{e}")
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"An unexpected error occurred: {e}")
-
-
-
-
-
-
+            QMessageBox.critical(self, "Error", f"An unexpected error occurred.\n\n{e}")
     def activate_add_text(self):
         self.adding_text = True
         self.measuring_distance = False
@@ -336,7 +307,7 @@ class ImageAnalyzer(QMainWindow):
             dpi = screen.physicalDotsPerInch()
 
             # Conversion de pixels en millimètres
-            distance = distance / dpi * 25.4
+            distance = distance / dpi * 25.4 * 4.6
             # convert in mm regarding the screen
 
             distance_text = QGraphicsTextItem(f"{distance:.2f} mm")

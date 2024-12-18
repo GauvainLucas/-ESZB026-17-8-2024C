@@ -32,7 +32,7 @@ String comPortString;
 Serial myPort;
 
 void setup() {
-  size(1920, 1024, P2D);// was 1024,600 - for 80 points it is better to have bigger screen
+  size(1024, 600);// was 1024,600 - for 80 points it is better to have bigger screen
   noStroke();
   //smooth();
   rectMode(CENTER);
@@ -48,7 +48,7 @@ background(0);
   historyY = new float[HISTORY_SIZE];
   points = new Point[POINTS_HISTORY_SIZE];
 
-  myPort = new Serial(this, "COM9", 115200);
+  myPort = new Serial(this, "/dev/ttyACM0", 115200);
  //  myPort = new Serial(this, Serial.list()[1], 250000); //just tested in debugging process, ignore
   myPort.bufferUntil('\n'); // Trigger a SerialEvent on new line
 }
@@ -88,7 +88,8 @@ float distance = n*12.5;// "zoom" options   -  much bigger screen
       if (x==0 && y==0) continue;
   
       // NEW, "green" look of the screen :D
-      fill(20,echoes[n],40); //or "fill(echoes[n])", or "fill(255,echoes[n]", or "fill(echoes[n],echoes[n])" - gives various graphic result
+      //fill(20,echoes[n],40); //or "fill(255,echoes[n]", or "fill(echoes[n],echoes[n])" - gives various graphic result
+      fill(echoes[n]);
       //first number in "fill(number,alpha) is brightnes of elypse, and second is "alpha" whatsoever, different effect
       noStroke();
       ellipse(x, y, 5, 5); //variation on 15,15 if necessary: ellipse(x, y, size, size); //various spot sizes...
